@@ -1,0 +1,21 @@
+name: daily-gpu-price
+on:
+  schedule:
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - run: python gpu_price_report.py
+        env:
+          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
