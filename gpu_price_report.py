@@ -2,16 +2,19 @@ import json
 import os
 import smtplib
 import statistics
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 
 import requests
 
+KST = timezone(timedelta(hours=9))
 TARGETS = ["H100", "A100"]
 VAST_NAMES = [
     "H100 SXM", "H100 NVL", "H100 PCIE",
     "A100 SXM4", "A100 SXM", "A100 PCIE", "A100X",
 ]
+HISTORY_FILE = "history.json"
+PERIODS = [("전일", 1, 2), ("전주", 7, 3), ("전월", 30, 5)]
 
 
 def vast_prices():
@@ -62,36 +65,96 @@ def runpod_prices():
     return sorted(out)
 
 
-def build_message():
+def load_history():
+    try:
+        with open(HISTORY_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_history(history, today):
+    cutoff = today - timedelta(days=120)
+    history = {
+        d: v
+        for d, v in history.items()
+        if datetime.strptime(d, "%Y-%m-%d").date() >= cutoff
+    }
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=1, sort_keys=True)
+
+
+def baseline(history, key, today, days, tol):
+    target = today - timedelta(days=days)
+    best = None
+    for d, vals in history.items():
+        dd = datetime.strptime(d, "%Y-%m-%d").date()
+        if dd >= today or key not in vals:
+            continue
+        gap = abs((dd - target).days)
+        if gap <= tol and (best is None or gap < best[0]):
+            best = (gap, vals[key])
+    return best[1] if best else None
+
+
+def fmt_change(cur, old):
+    if old is None or old == 0:
+        return "-"
+    diff = cur - old
+    pct = diff / old * 100
+    if abs(diff) < 0.005:
+        return "변동없음"
+    arrow = "▲" if diff > 0 else "▼"
+    return f"{arrow}{abs(diff):.2f}({pct:+.1f}%)"
+
+
+def change_line(history, key, cur, today, label):
+    parts = []
+    for p_name, days, tol in PERIODS:
+        old = baseline(history, key, today, days, tol)
+        parts.append(f"{p_name} {fmt_change(cur, old)}")
+    return f"  {label}: " + " | ".join(parts)
+
+
+def build_message(history, today):
+    vals = {}
     lines = [
-        f"[GPU 임대료] {datetime.now():%Y-%m-%d}",
+        f"[GPU 임대료] {today}",
         "",
         "■ Vast.ai (1장 $/h, 최저/중앙값/오퍼수)",
+        "(증감은 중앙값 기준)",
     ]
     try:
-        data = vast_prices()
-        for name, v in data.items():
+        for name, v in vast_prices().items():
             if v is None:
                 lines.append(f"- {name}: 오퍼 없음")
-            else:
-                lo, med, n = v
-                lines.append(f"- {name}: {lo:.2f} / {med:.2f} / {n}건")
+                continue
+            lo, med, n = v
+            lines.append(f"- {name}: {lo:.2f} / {med:.2f} / {n}건")
+            key = f"vast|{name}|median"
+            vals[key] = round(med, 4)
+            lines.append(change_line(history, key, med, today, "중앙값"))
     except Exception as e:
         lines.append(f"- 조회 실패: {e}")
     lines += ["", "■ RunPod ($/h, Secure / Community)"]
     try:
         for name, sec, com in runpod_prices():
             lines.append(f"- {name}: {sec or '-'} / {com or '-'}")
+            for label, val, tag in (("Secure", sec, "secure"), ("Comm", com, "community")):
+                if val:
+                    key = f"runpod|{name}|{tag}"
+                    vals[key] = val
+                    lines.append(change_line(history, key, val, today, label))
     except Exception as e:
         lines.append(f"- 조회 실패: {e}")
-    return "\n".join(lines)
+    return "\n".join(lines), vals
 
 
 def send_mail(text):
     user = os.environ["SMTP_USER"].strip()
     pw = os.environ["SMTP_APP_PASSWORD"].replace(" ", "").strip()
     msg = MIMEText(text, _charset="utf-8")
-    msg["Subject"] = f"GPU 임대료 {datetime.now():%m/%d}"
+    msg["Subject"] = f"GPU 임대료 {datetime.now(KST):%m/%d}"
     msg["From"] = user
     msg["To"] = os.environ["MAIL_TO"].strip()
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
@@ -103,6 +166,11 @@ def send_mail(text):
 
 
 if __name__ == "__main__":
-    text = build_message()
+    today = datetime.now(KST).date()
+    history = load_history()
+    text, vals = build_message(history, today)
+    if vals:
+        history[str(today)] = vals
+        save_history(history, today)
     print(text)
     send_mail(text)
