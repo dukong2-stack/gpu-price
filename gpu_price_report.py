@@ -20,9 +20,7 @@ def vast_prices():
     for name in VAST_NAMES:
         q = {
             "gpu_name": {"eq": name},
-            "num_gpus": {"eq": 1},
             "rentable": {"eq": True},
-            "verified": {"eq": True},
             "limit": 300,
         }
         r = requests.get(
@@ -33,9 +31,14 @@ def vast_prices():
         )
         if r.status_code != 200:
             raise RuntimeError(f"{name}: HTTP {r.status_code} {r.text[:150]}")
-        prices = [o["dph_total"] for o in r.json().get("offers", [])]
+        offers = r.json().get("offers", [])
+        prices = [
+            o["dph_total"] / o["num_gpus"] for o in offers if o.get("num_gpus")
+        ]
         if prices:
             result[name] = (min(prices), statistics.median(prices), len(prices))
+        else:
+            result[name] = None
     return result
 
 
@@ -67,10 +70,12 @@ def build_message():
     ]
     try:
         data = vast_prices()
-        if not data:
-            lines.append("- 조회된 오퍼 없음")
-        for name, (lo, med, n) in data.items():
-            lines.append(f"- {name}: {lo:.2f} / {med:.2f} / {n}건")
+        for name, v in data.items():
+            if v is None:
+                lines.append(f"- {name}: 오퍼 없음")
+            else:
+                lo, med, n = v
+                lines.append(f"- {name}: {lo:.2f} / {med:.2f} / {n}건")
     except Exception as e:
         lines.append(f"- 조회 실패: {e}")
     lines += ["", "■ RunPod ($/h, Secure / Community)"]
@@ -89,7 +94,6 @@ def send_mail(text):
     msg["Subject"] = f"GPU 임대료 {datetime.now():%m/%d}"
     msg["From"] = user
     msg["To"] = os.environ["MAIL_TO"].strip()
-    print(f"메일 로그인 시도: 아이디 {len(user)}자, 비밀번호 {len(pw)}자")
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
         s.ehlo()
         s.starttls()
