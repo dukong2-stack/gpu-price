@@ -23,10 +23,11 @@ def vast_prices():
             "num_gpus": {"eq": 1},
             "rentable": {"eq": True},
             "verified": {"eq": True},
+            "limit": 300,
         }
         r = requests.get(
             "https://cloud.vast.ai/api/v0/bundles/",
-            params={"q": json.dumps(q), "limit": 300},
+            params={"q": json.dumps(q)},
             headers=headers,
             timeout=60,
         )
