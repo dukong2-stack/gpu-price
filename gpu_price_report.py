@@ -20,23 +20,19 @@ def vast_prices():
     for name in VAST_NAMES:
         q = {
             "gpu_name": {"eq": name},
-            "rented": {"eq": False},
+            "num_gpus": {"eq": 1},
+            "rentable": {"eq": True},
             "verified": {"eq": True},
-            "type": "on-demand",
-            "limit": 300,
         }
         r = requests.get(
             "https://cloud.vast.ai/api/v0/bundles/",
-            params={"q": json.dumps(q)},
+            params={"q": json.dumps(q), "limit": 300},
             headers=headers,
             timeout=60,
         )
-        r.raise_for_status()
-        prices = [
-            o["dph_total"] / o["num_gpus"]
-            for o in r.json().get("offers", [])
-            if o.get("num_gpus")
-        ]
+        if r.status_code != 200:
+            raise RuntimeError(f"{name}: HTTP {r.status_code} {r.text[:150]}")
+        prices = [o["dph_total"] for o in r.json().get("offers", [])]
         if prices:
             result[name] = (min(prices), statistics.median(prices), len(prices))
     return result
@@ -66,7 +62,7 @@ def build_message():
     lines = [
         f"[GPU 임대료] {datetime.now():%Y-%m-%d}",
         "",
-        "■ Vast.ai (장당 $/h, 최저/중앙값/오퍼수)",
+        "■ Vast.ai (1장 $/h, 최저/중앙값/오퍼수)",
     ]
     try:
         data = vast_prices()
@@ -92,6 +88,7 @@ def send_mail(text):
     msg["Subject"] = f"GPU 임대료 {datetime.now():%m/%d}"
     msg["From"] = user
     msg["To"] = os.environ["MAIL_TO"].strip()
+    print(f"메일 로그인 시도: 아이디 {len(user)}자, 비밀번호 {len(pw)}자")
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
         s.ehlo()
         s.starttls()
