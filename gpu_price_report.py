@@ -9,8 +9,8 @@ import requests
 
 TARGETS = ["H100", "A100"]
 VAST_NAMES = [
-    "H100_SXM", "H100_NVL", "H100_PCIE",
-    "A100_SXM4", "A100_SXM", "A100_PCIE", "A100X",
+    "H100 SXM", "H100 NVL", "H100 PCIE",
+    "A100 SXM4", "A100 SXM", "A100 PCIE", "A100X",
 ]
 
 
