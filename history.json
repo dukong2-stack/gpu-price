@@ -45,10 +45,10 @@
   "runpod|H100 PCIe|secure": 2.89,
   "runpod|H100 SXM|community": 2.69,
   "runpod|H100 SXM|secure": 3.99,
-  "vast|A100 PCIE|median": 0.6015,
-  "vast|A100 SXM4|median": 0.6719,
-  "vast|H100 NVL|median": 2.9872,
-  "vast|H100 PCIE|median": 2.2478,
+  "vast|A100 PCIE|median": 0.6287,
+  "vast|A100 SXM4|median": 0.6556,
+  "vast|H100 NVL|median": 2.8944,
+  "vast|H100 PCIE|median": 1.9836,
   "vast|H100 SXM|median": 2.4004
  }
 }
