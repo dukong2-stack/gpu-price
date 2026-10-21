@@ -14,7 +14,13 @@ VAST_NAMES = [
     "A100 SXM4", "A100 SXM", "A100 PCIE", "A100X",
 ]
 HISTORY_FILE = "history.json"
-PERIODS = [("전일", 1, 2), ("전주", 7, 3), ("전월", 30, 5)]
+PERIODS = [(1, 2), (7, 3), (30, 5)]
+
+TABLE = "border-collapse:collapse;width:100%;font-size:12px"
+TH = "padding:6px 4px;background:#f1f3f4;border-bottom:2px solid #bbb;text-align:right"
+TH_L = TH.replace("right", "left")
+TD = "padding:6px 4px;border-bottom:1px solid #e0e0e0;text-align:right"
+TD_L = TD.replace("right", "left")
 
 
 def vast_prices():
@@ -97,63 +103,99 @@ def baseline(history, key, today, days, tol):
     return best[1] if best else None
 
 
-def fmt_change(cur, old):
-    if old is None or old == 0:
-        return "-"
-    diff = cur - old
-    pct = diff / old * 100
-    if abs(diff) < 0.005:
-        return "변동없음"
-    arrow = "▲" if diff > 0 else "▼"
-    return f"{arrow}{abs(diff):.2f}({pct:+.1f}%)"
-
-
-def change_line(history, key, cur, today, label):
-    parts = []
-    for p_name, days, tol in PERIODS:
+def change_cells(history, key, cur, today):
+    cells = ""
+    for days, tol in PERIODS:
         old = baseline(history, key, today, days, tol)
-        parts.append(f"{p_name} {fmt_change(cur, old)}")
-    return f"  {label}: " + " | ".join(parts)
+        if old is None or old == 0:
+            cells += f'<td style="{TD};color:#999">-</td>'
+            continue
+        diff = cur - old
+        pct = diff / old * 100
+        if abs(diff) < 0.005:
+            cells += f'<td style="{TD};color:#777">변동없음</td>'
+            continue
+        up = diff > 0
+        color = "#d32f2f" if up else "#1565c0"
+        arrow = "▲" if up else "▼"
+        cells += (
+            f'<td style="{TD};color:{color}">{arrow}{abs(diff):.2f}'
+            f"<br>({pct:+.1f}%)</td>"
+        )
+    return cells
 
 
-def build_message(history, today):
+def build_html(history, today):
     vals = {}
-    lines = [
-        f"[GPU 임대료] {today}",
-        "",
-        "■ Vast.ai (1장 $/h, 최저/중앙값/오퍼수)",
-        "(증감은 중앙값 기준)",
+    h = [
+        '<div style="font-family:-apple-system,\'Malgun Gothic\',sans-serif;max-width:680px">',
+        f"<h3>GPU 임대료 · {today}</h3>",
+        '<p style="font-size:12px;color:#666">단위: $/시간 (GPU 1장 기준) · '
+        '<span style="color:#d32f2f">▲상승</span> '
+        '<span style="color:#1565c0">▼하락</span> · 증감은 전일/전주/전월 대비</p>',
+        "<h4>Vast.ai (증감: 중앙값 기준)</h4>",
+        f'<table style="{TABLE}"><tr>'
+        f'<th style="{TH_L}">GPU</th><th style="{TH}">최저</th><th style="{TH}">중앙값</th>'
+        f'<th style="{TH}">오퍼</th><th style="{TH}">전일</th><th style="{TH}">전주</th>'
+        f'<th style="{TH}">전월</th></tr>',
     ]
     try:
         for name, v in vast_prices().items():
             if v is None:
-                lines.append(f"- {name}: 오퍼 없음")
+                h.append(
+                    f'<tr><td style="{TD_L}">{name}</td>'
+                    f'<td style="{TD};color:#999" colspan="6">오퍼 없음</td></tr>'
+                )
                 continue
             lo, med, n = v
-            lines.append(f"- {name}: {lo:.2f} / {med:.2f} / {n}건")
             key = f"vast|{name}|median"
             vals[key] = round(med, 4)
-            lines.append(change_line(history, key, med, today, "중앙값"))
+            h.append(
+                f'<tr><td style="{TD_L}">{name}</td><td style="{TD}">{lo:.2f}</td>'
+                f'<td style="{TD}"><b>{med:.2f}</b></td><td style="{TD}">{n}건</td>'
+                + change_cells(history, key, med, today)
+                + "</tr>"
+            )
     except Exception as e:
-        lines.append(f"- 조회 실패: {e}")
-    lines += ["", "■ RunPod ($/h, Secure / Community)"]
+        h.append(f'<tr><td colspan="7" style="{TD_L};color:#d32f2f">조회 실패: {e}</td></tr>')
+    h.append("</table>")
+
+    h.append(
+        "<h4>RunPod</h4>"
+        f'<table style="{TABLE}"><tr>'
+        f'<th style="{TH_L}">GPU</th><th style="{TH_L}">유형</th><th style="{TH}">가격</th>'
+        f'<th style="{TH}">전일</th><th style="{TH}">전주</th><th style="{TH}">전월</th></tr>'
+    )
     try:
         for name, sec, com in runpod_prices():
-            lines.append(f"- {name}: {sec or '-'} / {com or '-'}")
-            for label, val, tag in (("Secure", sec, "secure"), ("Comm", com, "community")):
-                if val:
-                    key = f"runpod|{name}|{tag}"
-                    vals[key] = val
-                    lines.append(change_line(history, key, val, today, label))
+            for label, val, tag in (
+                ("Secure", sec, "secure"),
+                ("Community", com, "community"),
+            ):
+                if not val:
+                    continue
+                key = f"runpod|{name}|{tag}"
+                vals[key] = val
+                h.append(
+                    f'<tr><td style="{TD_L}">{name}</td><td style="{TD_L}">{label}</td>'
+                    f'<td style="{TD}"><b>{val:.2f}</b></td>'
+                    + change_cells(history, key, val, today)
+                    + "</tr>"
+                )
     except Exception as e:
-        lines.append(f"- 조회 실패: {e}")
-    return "\n".join(lines), vals
+        h.append(f'<tr><td colspan="6" style="{TD_L};color:#d32f2f">조회 실패: {e}</td></tr>')
+    h.append("</table>")
+    h.append(
+        '<p style="font-size:11px;color:#888">Secure=전문 데이터센터(안정형), '
+        "Community=승인된 개인/소규모 제공자(저가형)</p></div>"
+    )
+    return "".join(h), vals
 
 
-def send_mail(text):
+def send_mail(html):
     user = os.environ["SMTP_USER"].strip()
     pw = os.environ["SMTP_APP_PASSWORD"].replace(" ", "").strip()
-    msg = MIMEText(text, _charset="utf-8")
+    msg = MIMEText(html, "html", "utf-8")
     msg["Subject"] = f"GPU 임대료 {datetime.now(KST):%m/%d}"
     msg["From"] = user
     msg["To"] = os.environ["MAIL_TO"].strip()
@@ -168,9 +210,9 @@ def send_mail(text):
 if __name__ == "__main__":
     today = datetime.now(KST).date()
     history = load_history()
-    text, vals = build_message(history, today)
+    html, vals = build_html(history, today)
     if vals:
         history[str(today)] = vals
         save_history(history, today)
-    print(text)
-    send_mail(text)
+    print(f"수집 항목 {len(vals)}개")
+    send_mail(html)
