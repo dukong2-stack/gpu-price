@@ -1,10 +1,18 @@
+import io
 import json
 import os
 import smtplib
 import statistics
 from datetime import datetime, timedelta, timezone
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import requests
 
 KST = timezone(timedelta(hours=9))
@@ -13,8 +21,15 @@ VAST_NAMES = [
     "H100 SXM", "H100 NVL", "H100 PCIE",
     "A100 SXM4", "A100 SXM", "A100 PCIE", "A100X",
 ]
+RUNPOD_CHART_GPUS = ["H100 SXM", "A100 SXM"]
 HISTORY_FILE = "history.json"
 PERIODS = [(1, 2), (7, 3), (30, 5)]
+CHART_DAYS = 60
+
+# 메일 하단 링크 (원하는 주소로 바꾸거나 추가할 수 있습니다)
+LINKS = [
+    ("TrendForce News (메모리 현물가 주간 기사 등)", "https://www.trendforce.com/news/"),
+]
 
 TABLE = "border-collapse:collapse;width:100%;font-size:12px"
 TH = "padding:6px 4px;background:#f1f3f4;border-bottom:2px solid #bbb;text-align:right"
@@ -187,18 +202,89 @@ def build_html(history, today):
     h.append("</table>")
     h.append(
         '<p style="font-size:11px;color:#888">Secure=전문 데이터센터(안정형), '
-        "Community=승인된 개인/소규모 제공자(저가형)</p></div>"
+        "Community=승인된 개인/소규모 제공자(저가형)</p>"
     )
     return "".join(h), vals
 
 
-def send_mail(html):
+def make_chart(history, today, title, specs):
+    cutoff = today - timedelta(days=CHART_DAYS)
+    fig, ax = plt.subplots(figsize=(7, 3.4), dpi=110)
+    drawn = 0
+    for label, key, style in specs:
+        pts = []
+        for d, v in sorted(history.items()):
+            dd = datetime.strptime(d, "%Y-%m-%d").date()
+            if dd >= cutoff and key in v:
+                pts.append((dd, v[key]))
+        if len(pts) >= 2:
+            ax.plot(
+                [p[0] for p in pts], [p[1] for p in pts], style,
+                marker="o", markersize=3, linewidth=1.5, label=label,
+            )
+            drawn += 1
+    if not drawn:
+        plt.close(fig)
+        return None
+    ax.set_title(title, fontsize=11)
+    ax.set_ylabel("$/h")
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=7, ncol=2)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    return buf.getvalue()
+
+
+def build_charts(history, today):
+    vast_specs = [(n, f"vast|{n}|median", "-") for n in VAST_NAMES]
+    run_specs = []
+    for n in RUNPOD_CHART_GPUS:
+        run_specs.append((f"{n} Secure", f"runpod|{n}|secure", "-"))
+        run_specs.append((f"{n} Community", f"runpod|{n}|community", "--"))
+    charts = [
+        make_chart(history, today, "Vast.ai median price trend ($/h per GPU)", vast_specs),
+        make_chart(history, today, "RunPod price trend ($/h)", run_specs),
+    ]
+    return [c for c in charts if c]
+
+
+def build_footer(n_charts):
+    parts = ['<h4>가격 추세 그래프</h4>']
+    if n_charts == 0:
+        parts.append(
+            '<p style="font-size:12px;color:#888">그래프는 2일 이상 기록이 쌓이면 표시됩니다.</p>'
+        )
+    else:
+        for i in range(n_charts):
+            parts.append(
+                f'<img src="cid:chart{i}" style="width:100%;max-width:640px;margin-bottom:8px">'
+            )
+    parts.append('<h4>참고 링크</h4><ul style="font-size:13px">')
+    for label, url in LINKS:
+        parts.append(f'<li><a href="{url}">{label}</a></li>')
+    parts.append("</ul></div>")
+    return "".join(parts)
+
+
+def send_mail(html, images):
     user = os.environ["SMTP_USER"].strip()
     pw = os.environ["SMTP_APP_PASSWORD"].replace(" ", "").strip()
-    msg = MIMEText(html, "html", "utf-8")
+    msg = MIMEMultipart("related")
     msg["Subject"] = f"GPU 임대료 {datetime.now(KST):%m/%d}"
     msg["From"] = user
     msg["To"] = os.environ["MAIL_TO"].strip()
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(html, "html", "utf-8"))
+    msg.attach(alt)
+    for i, png in enumerate(images):
+        img = MIMEImage(png, "png")
+        img.add_header("Content-ID", f"<chart{i}>")
+        img.add_header("Content-Disposition", "inline", filename=f"chart{i}.png")
+        msg.attach(img)
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
         s.ehlo()
         s.starttls()
@@ -214,5 +300,7 @@ if __name__ == "__main__":
     if vals:
         history[str(today)] = vals
         save_history(history, today)
-    print(f"수집 항목 {len(vals)}개")
-    send_mail(html)
+    images = build_charts(history, today)
+    html += build_footer(len(images))
+    print(f"수집 항목 {len(vals)}개, 그래프 {len(images)}개")
+    send_mail(html, images)
