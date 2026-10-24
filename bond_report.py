@@ -464,7 +464,7 @@ def main():
         '<div style="font-family:-apple-system,\'Malgun Gothic\',sans-serif;max-width:680px">',
         f"<h2>국채금리 · 채권ETF · {today}</h2>",
     ]
-        sections = [("1. 국채금리", yield_section), ("2. 채권 ETF 시세", etf_section)]
+    sections = [("1. 국채금리", yield_section), ("2. 채권 ETF 시세", etf_section)]
     if summary_section:
         sections.insert(0, ("시장 한눈에", summary_section))
     for title, fn in sections:
