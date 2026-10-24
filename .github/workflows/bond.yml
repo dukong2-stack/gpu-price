@@ -1,7 +1,7 @@
 name: daily-bond-yield
 on:
   schedule:
-    - cron: "30 23 * * *"
+    - cron: "0 23 * * *"
   workflow_dispatch:
 jobs:
   run:
