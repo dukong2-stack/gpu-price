@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="시장브리핑">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>시장 브리핑</title>
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--text:#0f172a;--sub:#64748b;--line:#e6eaf2;--up:#e5484d;--dn:#2f6fed;--upbg:#fdecee;--dnbg:#e7efff;--sh:0 1px 2px rgba(15,23,42,.05),0 6px 16px rgba(15,23,42,.06)}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#141d30;--text:#e8edf6;--sub:#8c99ae;--line:#222e46;--up:#ff6b70;--dn:#5b9bff;--upbg:#3b1b21;--dnbg:#14294d;--sh:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 65%,#4338ca 100%);color:#fff;padding:calc(16px + env(safe-area-inset-top)) 16px 18px;border-radius:0 0 24px 24px;box-shadow:0 6px 20px rgba(30,58,138,.25)}
+.top{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:22px;letter-spacing:-.02em}
+.sub{font-size:12px;opacity:.75;margin-top:2px}
+#rf{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:19px}
+#rf.spin{animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.chip{padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;background:rgba(255,255,255,.14)}
+.chip.up{background:rgba(255,99,105,.30)}.chip.dn{background:rgba(91,155,255,.30)}
+.chip.ok{background:rgba(52,211,153,.30)}.chip.mid{background:rgba(250,204,21,.28)}.chip.warn{background:rgba(251,146,60,.38)}.chip.bad{background:rgba(248,113,113,.5)}
+main{padding:6px 14px 0}
+.gt{margin:20px 4px 9px;font-size:13px;font-weight:800;color:var(--sub)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.list{display:grid;gap:10px}
+.card{background:var(--card);border-radius:18px;padding:13px 14px;box-shadow:var(--sh);border:1px solid var(--line);min-width:0}
+.nm{font-size:13px;font-weight:700;color:var(--sub)}
+.nm small{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;padding:1px 6px;border-radius:6px;background:var(--line)}
+.val{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:3px 0 6px}
+.val small{font-size:11px;font-weight:600;color:var(--sub);margin-left:3px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.dt{font-size:11px;color:var(--sub)}
+.pills{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px}
+.pill{display:inline-block;padding:3px 8px;border-radius:8px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill i{font-style:normal;font-weight:500;opacity:.7;margin-right:5px}
+.pill.up{color:var(--up);background:var(--upbg)}.pill.dn{color:var(--dn);background:var(--dnbg)}
+.pill.up.strong{background:var(--up);color:#fff}.pill.dn.strong{background:var(--dn);color:#fff}
+.pill.flat,.pill.na{color:var(--sub);background:var(--line)}
+.spark{width:100%;height:auto;display:block;margin-top:6px}
+.nospark{font-size:11px;color:var(--sub);padding:12px 0;text-align:center}
+.more{display:none;gap:5px;flex-wrap:wrap;margin-top:6px}
+.card.m{cursor:pointer}
+.card.m.open .more{display:flex}
+.etf{display:flex;gap:12px;align-items:center}
+.etf .l{flex:1;min-width:0}
+.etf .r{width:36%;flex:none}
+.etf .spark{margin:0}
+.badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:10px;font-weight:700}
+.badge.sec{background:#dcfce7;color:#166534}.badge.com{background:#fef3c7;color:#92400e}
+.chart{width:100%;height:auto}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .ax{fill:var(--sub);font-size:9px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:600;margin-top:6px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.err{color:var(--up);font-size:12px;margin-top:4px}
+.note{font-size:11px;color:var(--sub);margin:18px 6px;line-height:1.6}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:9}
+nav button{flex:1;border:0;background:none;color:var(--sub);font-size:19px;padding:5px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button span{font-size:10.5px;font-weight:700}
+nav button.on{color:#4f46e5}
+@media(prefers-color-scheme:dark){nav button.on{color:#a5b4fc}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div><h1>시장 브리핑</h1><div class="sub" id="upd">불러오는 중…</div></div>
+    <button id="rf" aria-label="새로고침">↻</button>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+<main id="view"></main>
+<nav id="tabs">
+  <button data-t="market">📊<span>시장</span></button>
+  <button data-t="yields">🏦<span>금리</span></button>
+  <button data-t="etf">💹<span>채권ETF</span></button>
+  <button data-t="gpu">🖥️<span>GPU</span></button>
+</nav>
+<script>
+let data=null,tab=(location.hash||'#market').slice(1),gid=0,UP='#e5484d',DN='#2f6fed';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function pill(v,kind,label,strongAt){
+  const l=label?`<i>${label}</i>`:'';
+  if(v==null) return `<span class="pill na">${l}-</span>`;
+  const bp=kind==='bp';
+  if(bp?Math.abs(v)<0.05:Math.abs(v)<0.005) return `<span class="pill flat">${l}0</span>`;
+  const strong=Math.abs(v)>=(strongAt!=null?strongAt:(bp?5:1));
+  const txt=bp?Math.abs(v).toFixed(1)+'bp':Math.abs(v).toFixed(2)+'%';
+  return `<span class="pill ${v>0?'up':'dn'}${strong?' strong':''}">${l}${v>0?'▲':'▼'}${txt}</span>`;
+}
+
+function spark(vals,w,h){
+  if(!vals||vals.length<3) return '<div class="nospark">기록 쌓는 중</div>';
+  const mn=Math.min(...vals),mx=Math.max(...vals),rg=(mx-mn)||1,p=3;
+  const pts=vals.map((v,i)=>[p+(w-2*p)*i/(vals.length-1),p+(h-2*p)*(1-(v-mn)/rg)]);
+  const line=pts.map(a=>a[0].toFixed(1)+','+a[1].toFixed(1)).join(' ');
+  const id='g'+(gid++);
+  const c=vals[vals.length-1]>=vals[0]?UP:DN;
+  const e=pts[pts.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" class="spark"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".30"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient></defs><polygon points="${p},${h} ${line} ${w-p},${h}" fill="url(#${id})"/><polyline points="${line}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${e[0].toFixed(1)}" cy="${e[1].toFixed(1)}" r="2.8" fill="${c}"/></svg>`;
+}
+
+function lineChart(series,w,h){
+  const all=series.flatMap(s=>s.values);
+  if(all.length<3) return '';
+  const mn=Math.min(...all),mx=Math.max(...all),rg=(mx-mn)||1;
+  const L=38,R=8,T=10,B=10;
+  const X=(i,n)=>L+(w-L-R)*i/(n-1),Y=v=>T+(h-T-B)*(1-(v-mn)/rg);
+  let g='';
+  for(let k=0;k<=3;k++){const v=mn+rg*k/3,y=Y(v);g+=`<line x1="${L}" x2="${w-R}" y1="${y}" y2="${y}" class="gl"/><text x="${L-5}" y="${y+3}" class="ax" text-anchor="end">${v.toFixed(2)}</text>`;}
+  const ln=series.map(s=>{const n=s.values.length;const pts=s.values.map((v,i)=>X(i,n).toFixed(1)+','+Y(v).toFixed(1)).join(' ');const last=s.values[n-1];return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(n-1,n).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="3.2" fill="${s.color}"/>`;}).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${g}${ln}</svg>`;
+}
+
+const errCard=t=>`<div class="card"><div class="err">${esc(t||'데이터 없음')}</div></div>`;
+
+function mcard(it){
+  if(it.error) return `<div class="card"><div class="nm">${esc(it.name)}</div><div class="err">${esc(it.error)}</div></div>`;
+  const warn=it.warn_up?'<small>오르면 불안</small>':'';
+  return `<div class="card m"><div class="nm">${esc(it.name)}${warn}</div><div class="val">${esc(it.text)}</div><div class="row">${pill(it.ch[0],it.kind,'전일')}<span class="dt">${it.date}</span></div>${spark(it.spark,160,42)}<div class="more">${pill(it.ch[1],it.kind,'1주')}${pill(it.ch[2],it.kind,'1개월')}</div></div>`;
+}
+function renderMarket(){
+  const m=data.market;
+  if(!Array.isArray(m)) return errCard(m&&m.error);
+  return m.map(g=>`<div class="gt">${esc(g.group)}</div><div class="grid">${g.items.map(mcard).join('')}</div>`).join('')+
+  `<p class="note">▲상승(빨강) ▼하락(파랑) · 진한 배경은 큰 변동(지수 등 ±1%, 금리차·스프레드 ±5bp 이상). 카드를 누르면 1주/1개월 변동이 보입니다. VIX와 하이일드 스프레드는 오르면 시장 불안이 커졌다는 뜻입니다.</p>`;
+}
+
+function renderYields(){
+  const y=data.yields;
+  if(!y||!y.items) return errCard(y&&y.error);
+  const cards=y.items.map(it=>it.error?`<div class="card"><div class="nm">${esc(it.name)}</div><div class="err">${esc(it.error)}</div></div>`:
+    `<div class="card"><div class="nm">${esc(it.name)}</div><div class="val">${esc(it.text)}</div><div class="dt">${it.date} 기준</div><div class="pills">${pill(it.ch[0],'bp','전일')}${pill(it.ch[1],'bp','전주')}${pill(it.ch[2],'bp','전월')}</div></div>`).join('');
+  const find=n=>y.items.find(i=>i.name===n&&i.spark);
+  const chart=(title,a,b)=>{
+    const s=[];
+    if(a) s.push({name:a.name,color:'#6366f1',values:a.spark,text:a.text});
+    if(b) s.push({name:b.name,color:'#f59e0b',values:b.spark,text:b.text});
+    if(!s.length) return '';
+    return `<div class="gt">${title}</div><div class="card">${lineChart(s,340,160)}<div class="legend">${s.map(x=>`<span><b style="background:${x.color}"></b>${esc(x.name)} ${esc(x.text)}</span>`).join('')}</div></div>`;
+  };
+  const errs=(y.errors||[]).map(e=>`<p class="err">${esc(e)}</p>`).join('');
+  return `<div class="gt">국채 금리 (전일·전주·전월 대비 bp)</div><div class="grid">${cards}</div>`+
+    chart('미국 10년·30년 (최근 약 90일)',find('미국 10년'),find('미국 30년'))+
+    chart('한국 10년·30년 (최근 약 90일)',find('한국 10년'),find('한국 30년'))+errs+
+    `<p class="note">1bp = 0.01%p. 금리가 오르면(▲) 채권 가격은 내립니다. 출처: 미국 FRED, 한국은행 ECOS. 통상 전 영업일 기준입니다.</p>`;
+}
+
+function renderEtf(){
+  const e=data.etf;
+  if(!e||!e.groups) return errCard(e&&e.error);
+  const body=e.groups.map(g=>`<div class="gt">${esc(g.group)}</div><div class="list">${g.items.map(it=>it.error?
+    `<div class="card"><div class="nm">${esc(it.name)}</div><div class="err">${esc(it.error)}</div></div>`:
+    `<div class="card etf"><div class="l"><div class="nm">${esc(it.name)}</div><div class="val">${esc(it.text)}</div><div class="pills">${pill(it.ch[0],'pct','전일')}${pill(it.ch[1],'pct','전주')}${pill(it.ch[2],'pct','전월')}</div><div class="dt">${it.date} 종가</div></div><div class="r">${spark(it.spark,100,60)}</div></div>`).join('')}</div>`).join('');
+  const errs=(e.errors||[]).map(x=>`<p class="err">${esc(x)}</p>`).join('');
+  return body+errs+`<p class="note">(H)는 환헤지 상품입니다. IEF/TLT는 해외 상장 달러 상품이며 TLT는 만기 20년 이상 국채라 30년물 대용입니다. 출처: 네이버 금융, Yahoo Finance.</p>`;
+}
+
+function renderGpu(){
+  const g=data.gpu;
+  if(!g||g.error) return errCard(g&&g.error);
+  const vast=(g.vast||[]).map(it=>`<div class="card etf"><div class="l"><div class="nm">${esc(it.name)}</div><div class="val">$${it.med.toFixed(2)}<small>/h 중앙값</small></div><div class="dt">최저 $${it.low.toFixed(2)} · 오퍼 ${it.n}건</div><div class="pills">${pill(it.ch[0],'pct','전일',3)}${pill(it.ch[1],'pct','전주',3)}${pill(it.ch[2],'pct','전월',3)}</div></div><div class="r">${spark(it.spark,100,60)}</div></div>`).join('');
+  const run=(g.runpod||[]).map(it=>`<div class="card etf"><div class="l"><div class="nm">${esc(it.name)}<span class="badge ${it.type==='Secure'?'sec':'com'}">${it.type}</span></div><div class="val">$${it.price.toFixed(2)}<small>/h</small></div><div class="pills">${pill(it.ch[0],'pct','전일',3)}${pill(it.ch[1],'pct','전주',3)}${pill(it.ch[2],'pct','전월',3)}</div></div><div class="r">${spark(it.spark,100,60)}</div></div>`).join('');
+  const errs=(g.errors||[]).map(x=>`<p class="err">${esc(x)}</p>`).join('');
+  return `<div class="gt">Vast.ai · GPU 1장당 $/시간 (중앙값)</div><div class="list">${vast||errCard('오퍼 없음')}</div><div class="gt">RunPod · $/시간</div><div class="list">${run||errCard('데이터 없음')}</div>${errs}<p class="note">Secure=전문 데이터센터(안정형), Community=승인된 개인/소규모 제공자(저가형). 전일·전주·전월 변동과 그래프는 기록이 쌓일수록 채워집니다.</p>`;
+}
+
+const tabs={market:renderMarket,yields:renderYields,etf:renderEtf,gpu:renderGpu};
+
+function chips(){
+  const m=Array.isArray(data.market)?data.market:[];
+  let up=0,dn=0,vix=null;
+  m.forEach(g=>g.items.forEach(it=>{
+    if(it.error||!it.ch) return;
+    if(it.ch[0]>0) up++; else if(it.ch[0]<0) dn++;
+    if(it.en==='VIX') vix=it;
+  }));
+  let h=`<span class="chip up">상승 ${up}</span><span class="chip dn">하락 ${dn}</span>`;
+  if(vix){
+    const v=vix.cur;
+    const r=v<15?['안정','ok']:v<20?['보통','mid']:v<30?['경계','warn']:['공포','bad'];
+    h+=`<span class="chip ${r[1]}">VIX ${v.toFixed(1)} · ${r[0]}</span>`;
+  }
+  $('#chips').innerHTML=h;
+}
+
+function show(t){
+  if(!tabs[t]) t='market';
+  tab=t;
+  const cs=getComputedStyle(document.documentElement);
+  UP=cs.getPropertyValue('--up').trim()||UP;
+  DN=cs.getPropertyValue('--dn').trim()||DN;
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('#view').innerHTML=data?tabs[t]():'<p class="note">불러오는 중…</p>';
+  history.replaceState(null,'','#'+t);
+  window.scrollTo(0,0);
+}
+
+async function load(){
+  $('#rf').classList.add('spin');
+  try{
+    const r=await fetch('data.json?t='+Date.now(),{cache:'no-store'});
+    data=await r.json();
+    $('#upd').textContent='업데이트 '+data.updated+' KST';
+    chips();
+  }catch(e){
+    $('#upd').textContent='데이터를 불러오지 못했습니다';
+  }
+  $('#rf').classList.remove('spin');
+  show(tab);
+}
+
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b) show(b.dataset.t);});
+$('#rf').addEventListener('click',load);
+document.addEventListener('click',e=>{const c=e.target.closest('.card.m');if(c) c.classList.toggle('open');});
+load();
+</script>
+</body>
+</html>
