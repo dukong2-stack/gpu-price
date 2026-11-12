@@ -456,5 +456,23 @@
   "vast|H100 NVL|median": 2.8022,
   "vast|H100 PCIE|median": 2.6678,
   "vast|H100 SXM|median": 4.6836
+ },
+ "2026-11-13": {
+  "runpod|A100 PCIe|community": 1.19,
+  "runpod|A100 PCIe|secure": 2.09,
+  "runpod|A100 SXM 40GB|community": 1,
+  "runpod|A100 SXM|community": 1.39,
+  "runpod|A100 SXM|secure": 2.19,
+  "runpod|H100 NVL|community": 2.59,
+  "runpod|H100 NVL|secure": 3.19,
+  "runpod|H100 PCIe|community": 1.99,
+  "runpod|H100 PCIe|secure": 2.89,
+  "runpod|H100 SXM|community": 2.69,
+  "runpod|H100 SXM|secure": 4.39,
+  "vast|A100 PCIE|median": 0.7339,
+  "vast|A100 SXM4|median": 0.8022,
+  "vast|H100 NVL|median": 3.1522,
+  "vast|H100 PCIE|median": 2.7581,
+  "vast|H100 SXM|median": 2.2672
  }
 }
